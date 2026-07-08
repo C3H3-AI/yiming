@@ -1,0 +1,10 @@
+{
+  "domain": "yiming",
+  "name": "一鸣 (Yiming)",
+  "codeowners": ["@C3H3-AI"],
+  "config_flow": true,
+  "documentation": "https://github.com/C3H3-AI/yiming",
+  "iot_class": "cloud_polling",
+  "requirements": [],
+  "version": "0.1.0"
+}
