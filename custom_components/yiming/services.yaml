@@ -1,0 +1,217 @@
+# 一鸣 (Yiming) 集成服务描述
+# 字段描述供 HA 前端「开发者工具 > 服务」展示；实际 schema 由 __init__.py 的 async_register 定义。
+
+receive_all_coupons:
+  name: 一键领取所有优惠券
+  description: 自动领取当前账号下所有可领的优惠券。
+  fields: {}
+
+receive_coupon:
+  name: 领取指定优惠券
+  description: 根据优惠券池 ID 与券码领取单张优惠券。
+  fields:
+    equity_pool_id:
+      name: 优惠券池ID
+      description: 优惠券活动池的 ID（整数）。
+      required: true
+      example: 12345
+    coupon_code:
+      name: 优惠券码
+      description: 要领取的优惠券编码。
+      required: true
+      example: "ABC123"
+    receive_num:
+      name: 领取数量
+      description: 领取张数，默认 1。
+      required: false
+      example: 1
+
+get_nearest_store:
+  name: 获取最近门店
+  description: 返回距离当前位置最近的可用门店。
+  fields: {}
+
+get_menu:
+  name: 获取门店菜单
+  description: 获取指定门店的商品分类菜单；不传 shop_code 时使用配置的默认门店。
+  fields:
+    shop_code:
+      name: 门店编码
+      description: 目标门店编码，留空则用默认门店。
+      required: false
+      example: "12345"
+
+get_sku_info:
+  name: 获取商品SKU详情
+  description: 获取指定门店下某个商品的 SKU 详情。
+  fields:
+    goods_id:
+      name: 商品ID
+      description: 商品 ID（整数）。
+      required: true
+      example: 67890
+    shop_code:
+      name: 门店编码
+      description: 商品所属门店编码。
+      required: true
+      example: "12345"
+
+search_stores:
+  name: 搜索门店
+  description: 按关键字与城市搜索附近门店。
+  fields:
+    keyword:
+      name: 搜索关键字
+      description: 门店名称关键字，如「一鸣」。
+      required: false
+      example: "一鸣"
+    city:
+      name: 城市
+      description: 城市名，如「杭州」。
+      required: false
+      example: "杭州"
+
+get_delivery_time:
+  name: 获取配送时段
+  description: 获取指定门店可配送的时间段。
+  fields:
+    store_code:
+      name: 门店编码
+      description: 目标门店编码，留空则用默认门店。
+      required: false
+      example: "12345"
+    order_type:
+      name: 订单类型
+      description: 订单类型，默认 "3"。
+      required: false
+      example: "3"
+
+get_default_address:
+  name: 获取默认地址
+  description: 返回当前账号的默认收货地址。
+  fields: {}
+
+get_nearby_addresses:
+  name: 获取附近地址
+  description: 返回当前位置附近的收货地址列表。
+  fields: {}
+
+calculate_cart:
+  name: 计算购物车
+  description: 根据商品列表计算购物车金额。
+  fields:
+    goods_list:
+      name: 商品列表
+      description: 商品列表，支持 JSON 字符串或数组。
+      required: true
+      example: '[{"goodsId":1,"count":2}]'
+
+pre_create_order:
+  name: 预创建订单
+  description: 下单前预创建订单，返回订单预览；不传 shop_code 时用默认门店。
+  fields:
+    shop_code:
+      name: 门店编码
+      description: 目标门店编码，留空则用默认门店。
+      required: false
+      example: "12345"
+    goods_list:
+      name: 商品列表
+      description: 商品列表，支持 JSON 字符串或数组。
+      required: true
+      example: '[{"goodsId":1,"count":2}]'
+
+submit_order:
+  name: 提交订单
+  description: 提交订单（堂食/自取/外卖）；不传 shop_code 时用默认门店。
+  fields:
+    shop_code:
+      name: 门店编码
+      description: 目标门店编码，留空则用默认门店。
+      required: false
+      example: "12345"
+    goods_list:
+      name: 商品列表
+      description: 商品列表，支持 JSON 字符串或数组。
+      required: true
+      example: '[{"goodsId":1,"count":2}]'
+    shop_name:
+      name: 门店名称
+      description: 门店名称（展示用）。
+      required: false
+      example: "一鸣真鲜奶吧(示例店)"
+    order_type:
+      name: 订单类型
+      description: 订单类型，默认 "1"。
+      required: false
+      example: "1"
+    pay_type:
+      name: 支付类型
+      description: 支付类型，默认 1。
+      required: false
+      example: 1
+    mobile:
+      name: 手机号
+      description: 下单手机号。
+      required: false
+      example: "13800138000"
+    remark:
+      name: 备注
+      description: 订单备注。
+      required: false
+      example: "少糖"
+    delivery_time:
+      name: 配送时间
+      description: 配送时间段。
+      required: false
+      example: "2026-07-16 18:00"
+    deliver_type:
+      name: 配送方式
+      description: 配送方式，默认 "1"。
+      required: false
+      example: "1"
+    real_total_money:
+      name: 实付金额
+      description: 实际支付金额，默认 0。
+      required: false
+      example: 0
+    address_id:
+      name: 地址ID
+      description: 收货地址 ID。
+      required: false
+      example: "addr_123"
+
+get_order:
+  name: 查询订单
+  description: 根据订单号查询订单详情。
+  fields:
+    order_no:
+      name: 订单号
+      description: 要查询的订单号。
+      required: true
+      example: "20260716001234"
+
+send_sms_code:
+  name: 发送短信验证码
+  description: 向指定手机号发送短信验证码（用于短信登录）。
+  fields:
+    mobile:
+      name: 手机号
+      description: 接收验证码的手机号。
+      required: true
+      example: "13800138000"
+
+register_by_sms:
+  name: 短信验证码登录
+  description: 使用手机号 + 短信验证码登录，返回 token。
+  fields:
+    mobile:
+      name: 手机号
+      description: 手机号。
+      required: true
+      example: "13800138000"
+    verify_code:
+      name: 验证码
+      description: 短信验证码。
+      required: true
+      example: "123456"

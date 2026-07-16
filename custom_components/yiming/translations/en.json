@@ -1,0 +1,239 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Yiming Integration",
+        "description": "Choose a login method.",
+        "data": {
+          "login_method": "Login Method"
+        }
+      },
+      "user_token": {
+        "title": "Enter Token",
+        "description": "Enter the token obtained from the Yiming WeChat mini-program.",
+        "data": {
+          "token": "Token",
+          "notice_type": "Notice Type (default 0)",
+          "location_entity": "Location Sensor (optional)"
+        }
+      },
+      "phone": {
+        "title": "Phone Login",
+        "description": "Enter your phone number; an SMS verification code will be sent.",
+        "data": {
+          "phone": "Phone Number"
+        }
+      },
+      "sms_code": {
+        "title": "SMS Verification Code",
+        "description": "The code has been sent to {phone}. Please enter the received code.",
+        "data": {
+          "verify_code": "Verification Code"
+        }
+      },
+      "reconfigure": {
+        "title": "Reconfigure Yiming Integration",
+        "description": "Choose a login method to update the configuration.",
+        "data": {
+          "login_method": "Login Method"
+        }
+      },
+      "reconfigure_token": {
+        "title": "Update Token",
+        "description": "Enter a new token.",
+        "data": {
+          "token": "Token",
+          "notice_type": "Notice Type (default 0)",
+          "location_entity": "Location Sensor (optional)"
+        }
+      },
+      "reconfigure_phone": {
+        "title": "Phone Login",
+        "description": "Enter your phone number; an SMS verification code will be sent.",
+        "data": {
+          "phone": "Phone Number"
+        }
+      },
+      "reconfigure_sms_code": {
+        "title": "SMS Verification Code",
+        "description": "The code has been sent to {phone}. Please enter the received code.",
+        "data": {
+          "verify_code": "Verification Code"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Unable to connect to the Yiming service. Please check your network.",
+      "invalid_auth": "The token is invalid or expired.",
+      "already_configured": "This Yiming account is already configured.",
+      "send_sms_failed": "Failed to send the verification code. Please try again later.",
+      "invalid_phone": "Please enter a valid 11-digit phone number.",
+      "invalid_code": "The verification code is incorrect or expired.",
+      "unknown": "Unknown error. Please try again later."
+    },
+    "abort": {
+      "already_configured": "This Yiming account is already configured.",
+      "reconfigure_successful": "Reconfiguration successful."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Yiming Integration Options",
+        "description": "Search for the default store by name (leave empty to keep the current setting).",
+        "data": {
+          "store_keyword": "Store search keyword (optional)"
+        }
+      },
+      "store_pick": {
+        "title": "Select Default Store",
+        "description": "Choose a store from the search results as the default store.",
+        "data": {
+          "default_store": "Default Store"
+        }
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "balance": { "name": "Stored Balance" },
+      "points": { "name": "Points" },
+      "member_level": { "name": "Membership Level" },
+      "member_expiry": { "name": "Membership Expiry" },
+      "coupon_count": { "name": "Coupon Count" },
+      "member_name": { "name": "Member Name" },
+      "growth_value": { "name": "Growth Value" },
+      "app_notice": { "name": "App Notice" },
+      "claimable_coupons": { "name": "Claimable Coupons" },
+      "recent_orders": { "name": "Recent Orders" },
+      "usable_coupons": { "name": "Usable Coupons" },
+      "integral_detail": { "name": "Latest Points Change" },
+      "member_equity": { "name": "Membership Equity Tiers" },
+      "transaction_details": { "name": "Latest Transactions" },
+      "default_address": { "name": "Default Address" },
+      "nearest_store": { "name": "Nearest Store" },
+      "payment_qrcode": { "name": "Payment QR Code" }
+    }
+  },
+  "services": {
+    "receive_all_coupons": {
+      "name": "Receive All Coupons",
+      "description": "Iterate through the coupon pool activity page and claim every currently claimable coupon."
+    },
+    "receive_coupon": {
+      "name": "Receive Specified Coupon",
+      "description": "Claim a single coupon by its equity pool ID and coupon code.",
+      "fields": {
+        "equity_pool_id": { "name": "Equity Pool ID", "description": "The equity pool the coupon belongs to" },
+        "coupon_code": { "name": "Coupon Code", "description": "The coupon code" },
+        "receive_num": { "name": "Quantity", "description": "Number of coupons to claim, default 1" }
+      }
+    },
+    "get_nearest_store": {
+      "name": "Get Nearest Store",
+      "description": "Get the nearest available store information for the current location."
+    },
+    "get_menu": {
+      "name": "Get Store Menu",
+      "description": "Get the product menu of a specified store.",
+      "fields": {
+        "shop_code": { "name": "Store Code", "description": "Store code, falls back to default store if empty" }
+      }
+    },
+    "get_sku_info": {
+      "name": "Get Product SKU Details",
+      "description": "Get the SKU and specification information of a specified product.",
+      "fields": {
+        "goods_id": { "name": "Product ID", "description": "Product ID" },
+        "shop_code": { "name": "Store Code", "description": "Store code" }
+      }
+    },
+    "search_stores": {
+      "name": "Search Stores",
+      "description": "Search stores by keyword.",
+      "fields": {
+        "keyword": { "name": "Keyword", "description": "Search keyword" },
+        "city": { "name": "City", "description": "City name" }
+      }
+    },
+    "get_delivery_time": {
+      "name": "Get Delivery Time Slots",
+      "description": "Get the available delivery / pickup time slots for a store.",
+      "fields": {
+        "store_code": { "name": "Store Code", "description": "Store code, falls back to default store if empty" },
+        "order_type": { "name": "Order Type", "description": "1=Dine-in, 2=Pickup, 3=Takeout" }
+      }
+    },
+    "get_default_address": {
+      "name": "Get Default Address",
+      "description": "Get the default shipping address information."
+    },
+    "get_nearby_addresses": {
+      "name": "Get Nearby Addresses",
+      "description": "Get the list of addresses near the current location."
+    },
+    "calculate_cart": {
+      "name": "Calculate Cart",
+      "description": "Calculate cart product prices and discounts.",
+      "fields": {
+        "goods_list": { "name": "Product List", "description": "Product list JSON" }
+      }
+    },
+    "pre_create_order": {
+      "name": "Pre-create Order",
+      "description": "Pre-create an order and return order information for confirmation.",
+      "fields": {
+        "shop_code": { "name": "Store Code", "description": "Store code, falls back to default store if empty" },
+        "goods_list": { "name": "Product List", "description": "Product list JSON" }
+      }
+    },
+    "submit_order": {
+      "name": "Submit Order",
+      "description": "Submit an order for delivery / pickup.",
+      "fields": {
+        "shop_code": { "name": "Store Code", "description": "Store code, falls back to default store if empty" },
+        "goods_list": { "name": "Product List", "description": "Product list JSON" },
+        "shop_name": { "name": "Store Name", "description": "Store name" },
+        "order_type": { "name": "Order Type", "description": "1=Dine-in, 2=Pickup, 3=Takeout" },
+        "pay_type": { "name": "Payment Method", "description": "1=WeChat Pay, 2=Balance, 10=Pay in Store" },
+        "mobile": { "name": "Phone Number", "description": "Contact phone number" },
+        "remark": { "name": "Remark", "description": "Order remark" },
+        "delivery_time": { "name": "Delivery Time", "description": "Expected delivery time" },
+        "deliver_type": { "name": "Delivery Method", "description": "1=Dine-in, 2=Pickup, 3=Takeout" },
+        "real_total_money": { "name": "Actual Amount", "description": "Actual amount paid (in cents)" },
+        "address_id": { "name": "Address ID", "description": "Shipping address ID" }
+      }
+    },
+    "get_order": {
+      "name": "Query Order",
+      "description": "Query order details.",
+      "fields": {
+        "order_no": { "name": "Order Number", "description": "Order number" }
+      }
+    },
+    "send_sms_code": {
+      "name": "Send SMS Verification Code",
+      "description": "Send an SMS verification code to the specified phone number (for login).",
+      "fields": {
+        "mobile": { "name": "Phone Number", "description": "Phone number to receive the code" }
+      }
+    },
+    "register_by_sms": {
+      "name": "SMS Verification Code Login",
+      "description": "Log in with an SMS verification code and return the token.",
+      "fields": {
+        "mobile": { "name": "Phone Number", "description": "Phone number" },
+        "verify_code": { "name": "Verification Code", "description": "SMS verification code" }
+      }
+    }
+  },
+  "selector": {
+    "login_method": {
+      "name": "Login Method",
+      "options": {
+        "token": "Enter Token",
+        "sms": "SMS Login"
+      }
+    }
+  }
+}

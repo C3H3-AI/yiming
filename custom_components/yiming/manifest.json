@@ -4,7 +4,8 @@
   "codeowners": ["@C3H3-AI"],
   "config_flow": true,
   "documentation": "https://github.com/C3H3-AI/yiming",
+  "issue_tracker": "https://github.com/C3H3-AI/yiming/issues",
   "iot_class": "cloud_polling",
-  "requirements": [],
-  "version": "0.1.0"
+  "requirements": ["pycryptodome>=3.20.0"],
+  "version": "1.0"
 }

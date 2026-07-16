@@ -7,15 +7,21 @@
 
 from __future__ import annotations
 
+import logging
+from datetime import timedelta
 from typing import Any, Callable
 
 from homeassistant.components.sensor import SensorEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.helpers.event import async_track_time_interval
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
+from .api import YimingApiError
 from .const import DOMAIN
+
+_LOGGER = logging.getLogger(__name__)
 
 
 def _safe(data: dict, *keys, default=None):
@@ -51,6 +57,7 @@ class YimingSensor(CoordinatorEntity, SensorEntity):
     ) -> None:
         super().__init__(coordinator)
         self._key = key
+        self._attr_translation_key = key
         self._attr_name = name
         self._attr_icon = icon
         self._value_fn = value_fn
@@ -59,7 +66,7 @@ class YimingSensor(CoordinatorEntity, SensorEntity):
         self._attr_native_unit_of_measurement = unit
         self._attr_state_class = state_class
         self._attr_device_class = device_class
-        self._attr_device_info = coordinator._device_info  # type: ignore[attr-defined]
+        self._attr_device_info = coordinator.device_info  # type: ignore[attr-defined]
 
     @property
     def native_value(self):
@@ -70,6 +77,65 @@ class YimingSensor(CoordinatorEntity, SensorEntity):
         if self._attrs_fn:
             return self._attrs_fn(self.coordinator.data)
         return {}
+
+
+class YimingQRCodeSensor(SensorEntity):
+    """付款二维码传感器 — 加入 HA 时立即生成，并周期性刷新。"""
+
+    _attr_has_entity_name = True
+    _attr_should_poll = False
+    _attr_icon = "mdi:qr-code"
+    _attr_translation_key = "payment_qrcode"
+
+    def __init__(self, coordinator, entry: ConfigEntry) -> None:
+        self._coordinator = coordinator
+        self._api = coordinator.api
+        self._hass = coordinator.hass
+        self._attr_unique_id = f"{entry.entry_id}_payment_qrcode"
+        self._attr_device_info = coordinator.device_info
+        self._cached_code: str | None = None
+        self._refresh_interval = timedelta(seconds=60)
+        self._unsub_refresh: Callable[[], None] | None = None
+
+    @property
+    def native_value(self):
+        return self._cached_code or "待生成"
+
+    @property
+    def extra_state_attributes(self) -> dict:
+        code = self._cached_code or ""
+        return {
+            "qrcode_number": code,
+            "qrcode_image": f"https://api.qrserver.com/v1/create-qr-code/?size=300x300&data={code}",
+            "barcode_image": f"https://barcode.tec-it.com/barcode.ashx?data={code}&code=Code128&dpi=96",
+        }
+
+    async def async_added_to_hass(self) -> None:
+        """实体加入 HA 时立即刷新一次，并注册周期刷新。"""
+        await super().async_added_to_hass()
+        await self._refresh()
+        self._unsub_refresh = async_track_time_interval(
+            self.hass,
+            self._refresh,
+            self._refresh_interval,
+        )
+
+    async def async_will_remove_from_hass(self) -> None:
+        """移除周期刷新监听。"""
+        if self._unsub_refresh is not None:
+            self._unsub_refresh()
+            self._unsub_refresh = None
+        await super().async_will_remove_from_hass()
+
+    async def _refresh(self, now=None) -> None:
+        """调用 API 刷新付款码（now 为定时回调传入的时间参数，直调时可省略）。"""
+        try:
+            code = await self._api.get_qrcode()
+            self._cached_code = str(code)
+            _LOGGER.info("一鸣付款码已刷新: %s", self._cached_code)
+        except YimingApiError as err:
+            _LOGGER.warning("一鸣付款码刷新失败: %s", err)
+        self.async_write_ha_state()
 
 
 def _build_sensors(coordinator, entry: ConfigEntry):
@@ -156,6 +222,177 @@ def _build_sensors(coordinator, entry: ConfigEntry):
         pools = _safe(d, "coupon_pools") or []
         return sum(1 for p in pools if (p.get("residue_count") or 0) > 0)
 
+    def orders_val(d):
+        orders = _safe(d, "orders", "list") or []
+        return len(orders)
+
+    def orders_attrs(d):
+        orders = _safe(d, "orders", "list") or []
+        return {
+            "total": _safe(d, "orders", "total"),
+            "recent_orders": [
+                {
+                    "order_no": o.get("orderNo"),
+                    "order_type": o.get("orderType"),
+                    "total_amount": o.get("totalAmount"),
+                    "actual_amount": o.get("actualAmount"),
+                    "order_status": o.get("orderStatus"),
+                    "status_name": o.get("statusName"),
+                    "create_time": o.get("createTime"),
+                    "store_name": _safe(o, "storeInfo", "storeName"),
+                    "goods_count": len(o.get("orderItemVoList") or []),
+                }
+                for o in orders
+            ],
+        }
+
+    def usable_coupons_val(d):
+        coupons = _safe(d, "my_coupons", "list") or []
+        return len(coupons)
+
+    def usable_coupons_attrs(d):
+        coupons = _safe(d, "my_coupons", "list") or []
+        coupon_sum = _safe(d, "my_coupons", "couponSum") or {}
+        return {
+            "total": _safe(d, "my_coupons", "total"),
+            "summary": {
+                "membership_gift": coupon_sum.get("membershipGift"),
+                "recharge_gift": coupon_sum.get("rechargeGift"),
+                "takeaway_order": coupon_sum.get("takeawayOrder"),
+                "use_in_store": coupon_sum.get("useInStore"),
+                "common_consume": coupon_sum.get("commonConsume"),
+            },
+            "coupons": [
+                {
+                    "name": c.get("name"),
+                    "face_value": c.get("faceValue"),
+                    "amount_ref": c.get("amountRef"),
+                    "coupon_type": c.get("couponType"),
+                    "use_scope": c.get("useScope"),
+                    "valid_time": c.get("validTime"),
+                    "enable_date": c.get("enableDate"),
+                    "disable_date": c.get("disableDate"),
+                    "useful_status": c.get("usefulStatus"),
+                    "verification_status": c.get("verificationStatus"),
+                    "bill_no": c.get("billNo"),
+                    "coupon_bill_no": c.get("couponBillNo"),
+                }
+                for c in coupons
+            ],
+        }
+
+    def integral_detail_val(d):
+        detail_data = _safe(d, "integral_detail", "data") or []
+        if detail_data:
+            last = detail_data[0]
+            change = last.get("changeCount", 0)
+            return f"{change:+d}"
+        return "0"
+
+    def integral_detail_attrs(d):
+        detail_data = _safe(d, "integral_detail", "data") or []
+        return {
+            "total": _safe(d, "integral_detail", "total"),
+            "records": [
+                {
+                    "type_name": r.get("integralTypeName"),
+                    "change_count": r.get("changeCount"),
+                    "change_time": r.get("changeTime"),
+                    "remark": r.get("remark"),
+                    "order_no": r.get("orderNo"),
+                }
+                for r in detail_data
+            ],
+        }
+
+    def equity_val(d):
+        equity = _safe(d, "app_equity", "levelEquityList") or []
+        return len(equity)
+
+    def equity_attrs(d):
+        equity = _safe(d, "app_equity", "levelEquityList") or []
+        return {
+            "levels": [
+                {
+                    "level": l.get("level"),
+                    "equity_pools": [
+                        {
+                            "name": p.get("name"),
+                            "sub_title": p.get("subTitle"),
+                            "type": p.get("type"),
+                        }
+                        for p in (l.get("equityPoolDTOList") or [])
+                    ],
+                }
+                for l in equity
+            ],
+        }
+
+    def transaction_val(d):
+        txns = _safe(d, "transaction_details") or []
+        if txns:
+            last = txns[0] if isinstance(txns, list) else txns
+            amount = last.get("transactionAmount") or last.get("amount") or 0
+            return f"¥{float(amount)/100:.2f}" if amount else "0"
+        return "无"
+
+    def transaction_attrs(d):
+        txns = _safe(d, "transaction_details") or []
+        if not isinstance(txns, list):
+            txns = [txns]
+        return {
+            "records": [
+                {
+                    "amount": t.get("transactionAmount"),
+                    "type": t.get("transactionType"),
+                    "type_name": t.get("transactionTypeName"),
+                    "time": t.get("createTime") or t.get("transactionTime"),
+                    "remark": t.get("remark"),
+                    "balance": t.get("balance"),
+                }
+                for t in txns[:20]
+            ],
+        }
+
+    def address_val(d):
+        addr = _safe(d, "default_address") or {}
+        return addr.get("name", "无")
+
+    def address_attrs(d):
+        addr = _safe(d, "default_address") or {}
+        return {
+            "name": addr.get("name"),
+            "mobile": addr.get("mobile"),
+            "province": addr.get("province"),
+            "city": addr.get("city"),
+            "district": addr.get("district"),
+            "address": addr.get("address"),
+            "business": addr.get("business"),
+            "estate": addr.get("estate"),
+            "is_default": addr.get("default"),
+        }
+
+    def nearest_store_val(d):
+        store = _safe(d, "nearest_store")
+        if store is None:
+            return "未知"
+        return store.get("storeName") or store.get("name") or "未知"
+
+    def nearest_store_attrs(d):
+        store = _safe(d, "nearest_store") or {}
+        return {
+            "store_code": store.get("storeCode"),
+            "address": store.get("address"),
+            "distance": store.get("distance"),
+            "business_status": store.get("businessStatus"),
+            "business_time": store.get("businessTime"),
+            "phone": store.get("phone"),
+            "longitude": store.get("longitude"),
+            "latitude": store.get("latitude"),
+            "city": store.get("city"),
+            "district": store.get("district"),
+        }
+
     def claimable_attrs(d):
         pools = _safe(d, "coupon_pools") or []
         claimable = [p for p in pools if (p.get("residue_count") or 0) > 0]
@@ -214,6 +451,41 @@ def _build_sensors(coordinator, entry: ConfigEntry):
             icon="mdi:ticket-confirmation", value_fn=claimable_val,
             attrs_fn=claimable_attrs, state_class="measurement",
         ),
+        YimingSensor(
+            coordinator, entry, key="recent_orders", name="最近订单数",
+            icon="mdi:receipt", value_fn=orders_val,
+            attrs_fn=orders_attrs, state_class="measurement",
+        ),
+        YimingSensor(
+            coordinator, entry, key="usable_coupons", name="可用优惠券",
+            icon="mdi:ticket-percent-outline", value_fn=usable_coupons_val,
+            attrs_fn=usable_coupons_attrs, state_class="measurement",
+        ),
+        YimingSensor(
+            coordinator, entry, key="integral_detail", name="最近积分变动",
+            icon="mdi:swap-vertical-bold", value_fn=integral_detail_val,
+            attrs_fn=integral_detail_attrs,
+        ),
+        YimingSensor(
+            coordinator, entry, key="member_equity", name="会员权益层级",
+            icon="mdi:shield-star", value_fn=equity_val,
+            attrs_fn=equity_attrs,
+        ),
+        YimingSensor(
+            coordinator, entry, key="transaction_details", name="最近交易",
+            icon="mdi:swap-horizontal-bold", value_fn=transaction_val,
+            attrs_fn=transaction_attrs,
+        ),
+        YimingSensor(
+            coordinator, entry, key="default_address", name="默认地址",
+            icon="mdi:map-marker", value_fn=address_val,
+            attrs_fn=address_attrs,
+        ),
+        YimingSensor(
+            coordinator, entry, key="nearest_store", name="最近门店",
+            icon="mdi:store", value_fn=nearest_store_val,
+            attrs_fn=nearest_store_attrs,
+        ),
     ]
 
 
@@ -223,4 +495,7 @@ async def async_setup_entry(
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     coordinator = hass.data[DOMAIN][entry.entry_id]
-    async_add_entities(_build_sensors(coordinator, entry))
+    entities = _build_sensors(coordinator, entry)
+    # 付款二维码按需生成，不参与轮询
+    entities.append(YimingQRCodeSensor(coordinator, entry))
+    async_add_entities(entities)

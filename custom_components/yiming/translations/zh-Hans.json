@@ -3,19 +3,95 @@
     "step": {
       "user": {
         "title": "一鸣 (Yiming) 集成",
-        "description": "输入从一鸣微信小程序抓包得到的 token。",
+        "description": "选择登录方式。",
         "data": {
-          "token": "Token（请求头 token 值）",
-          "notice_type": "公告类型 (type，默认 0)"
+          "login_method": "登录方式"
+        }
+      },
+      "user_token": {
+        "title": "输入 Token",
+        "description": "输入从一鸣微信小程序获取的 token。",
+        "data": {
+          "token": "Token",
+          "notice_type": "公告类型（默认 0）",
+          "location_entity": "位置传感器（可选）"
+        }
+      },
+      "phone": {
+        "title": "手机号登录",
+        "description": "输入手机号，系统将发送短信验证码。",
+        "data": {
+          "phone": "手机号"
+        }
+      },
+      "sms_code": {
+        "title": "短信验证码",
+        "description": "验证码已发送到 {phone}，请输入收到的验证码。",
+        "data": {
+          "verify_code": "验证码"
+        }
+      },
+      "reconfigure": {
+        "title": "重新配置一鸣集成",
+        "description": "选择登录方式更新配置。",
+        "data": {
+          "login_method": "登录方式"
+        }
+      },
+      "reconfigure_token": {
+        "title": "更新 Token",
+        "description": "输入新的 Token。",
+        "data": {
+          "token": "Token",
+          "notice_type": "公告类型（默认 0）",
+          "location_entity": "位置传感器（可选）"
+        }
+      },
+      "reconfigure_phone": {
+        "title": "手机号登录",
+        "description": "输入手机号，系统将发送短信验证码。",
+        "data": {
+          "phone": "手机号"
+        }
+      },
+      "reconfigure_sms_code": {
+        "title": "短信验证码",
+        "description": "验证码已发送到 {phone}，请输入收到的验证码。",
+        "data": {
+          "verify_code": "验证码"
         }
       }
     },
     "error": {
-      "cannot_connect": "无法连接一鸣服务，请检查 token 是否正确。",
-      "invalid_auth": "Token 无效或已过期。"
+      "cannot_connect": "无法连接一鸣服务，请检查网络。",
+      "invalid_auth": "Token 无效或已过期。",
+      "already_configured": "该一鸣账户已配置。",
+      "send_sms_failed": "发送验证码失败，请稍后重试。",
+      "invalid_phone": "请输入有效的11位手机号。",
+      "invalid_code": "验证码错误或已过期。",
+      "unknown": "未知错误，请稍后重试。"
     },
     "abort": {
-      "already_configured": "该一鸣账户已配置。"
+      "already_configured": "该一鸣账户已配置。",
+      "reconfigure_successful": "重新配置成功。"
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "一鸣集成选项",
+        "description": "按名称搜索默认门店（留空则保留原设置）。",
+        "data": {
+          "store_keyword": "门店搜索关键字（可选）"
+        }
+      },
+      "store_pick": {
+        "title": "选择默认门店",
+        "description": "从搜索结果中选择一个门店作为默认门店。",
+        "data": {
+          "default_store": "默认门店"
+        }
+      }
     }
   },
   "entity": {
@@ -28,7 +104,15 @@
       "member_name": { "name": "会员姓名" },
       "growth_value": { "name": "成长值" },
       "app_notice": { "name": "App 公告" },
-      "claimable_coupons": { "name": "可领优惠券" }
+      "claimable_coupons": { "name": "可领优惠券" },
+      "recent_orders": { "name": "最近订单数" },
+      "usable_coupons": { "name": "可用优惠券" },
+      "integral_detail": { "name": "最近积分变动" },
+      "member_equity": { "name": "会员权益层级" },
+      "transaction_details": { "name": "最近交易" },
+      "default_address": { "name": "默认地址" },
+      "nearest_store": { "name": "最近门店" },
+      "payment_qrcode": { "name": "付款二维码" }
     }
   },
   "services": {
@@ -40,9 +124,115 @@
       "name": "领取指定优惠券",
       "description": "凭权益池 ID 与券码领取单张优惠券。",
       "fields": {
-        "equity_pool_id": { "name": "权益池 ID", "description": "优惠券所属权益池 ID (equityPoolId)" },
-        "coupon_code": { "name": "券码", "description": "优惠券码 (couponCode)" },
-        "receive_num": { "name": "领取数量", "description": "领取张数, 默认 1" }
+        "equity_pool_id": { "name": "权益池 ID", "description": "优惠券所属权益池 ID" },
+        "coupon_code": { "name": "券码", "description": "优惠券码" },
+        "receive_num": { "name": "领取数量", "description": "领取张数，默认 1" }
+      }
+    },
+    "get_nearest_store": {
+      "name": "获取最近门店",
+      "description": "获取当前位置最近的可用门店信息。"
+    },
+    "get_menu": {
+      "name": "获取门店菜单",
+      "description": "获取指定门店的商品菜单。",
+      "fields": {
+        "shop_code": { "name": "门店编码", "description": "门店编码，留空使用默认门店" }
+      }
+    },
+    "get_sku_info": {
+      "name": "获取商品 SKU 详情",
+      "description": "获取指定商品的 SKU 和规格信息。",
+      "fields": {
+        "goods_id": { "name": "商品 ID", "description": "商品 ID" },
+        "shop_code": { "name": "门店编码", "description": "门店编码" }
+      }
+    },
+    "search_stores": {
+      "name": "搜索门店",
+      "description": "按关键词搜索门店。",
+      "fields": {
+        "keyword": { "name": "关键词", "description": "搜索关键词" },
+        "city": { "name": "城市", "description": "城市名称" }
+      }
+    },
+    "get_delivery_time": {
+      "name": "获取配送时段",
+      "description": "获取门店可选的配送/自取时段。",
+      "fields": {
+        "store_code": { "name": "门店编码", "description": "门店编码，留空使用默认门店" },
+        "order_type": { "name": "订单类型", "description": "1=堂食, 2=自取, 3=外卖" }
+      }
+    },
+    "get_default_address": {
+      "name": "获取默认地址",
+      "description": "获取默认收货地址信息。"
+    },
+    "get_nearby_addresses": {
+      "name": "获取附近地址",
+      "description": "获取当前位置附近的地址列表。"
+    },
+    "calculate_cart": {
+      "name": "计算购物车",
+      "description": "计算购物车商品价格和优惠。",
+      "fields": {
+        "goods_list": { "name": "商品列表", "description": "商品列表 JSON" }
+      }
+    },
+    "pre_create_order": {
+      "name": "预创建订单",
+      "description": "预创建订单，返回订单信息供确认。",
+      "fields": {
+        "shop_code": { "name": "门店编码", "description": "门店编码，留空使用默认门店" },
+        "goods_list": { "name": "商品列表", "description": "商品列表 JSON" }
+      }
+    },
+    "submit_order": {
+      "name": "提交订单",
+      "description": "提交订单进行配送。",
+      "fields": {
+        "shop_code": { "name": "门店编码", "description": "门店编码，留空使用默认门店" },
+        "goods_list": { "name": "商品列表", "description": "商品列表 JSON" },
+        "shop_name": { "name": "门店名称", "description": "门店名称" },
+        "order_type": { "name": "订单类型", "description": "1=堂食, 2=自取, 3=外卖" },
+        "pay_type": { "name": "支付方式", "description": "1=微信支付, 2=余额支付, 10=到店付" },
+        "mobile": { "name": "手机号", "description": "联系手机号" },
+        "remark": { "name": "备注", "description": "订单备注" },
+        "delivery_time": { "name": "配送时间", "description": "期望配送时间" },
+        "deliver_type": { "name": "配送方式", "description": "1=堂食, 2=自取, 3=外卖" },
+        "real_total_money": { "name": "实付金额", "description": "实付金额（分）" },
+        "address_id": { "name": "地址 ID", "description": "收货地址 ID" }
+      }
+    },
+    "get_order": {
+      "name": "查询订单",
+      "description": "查询订单详情。",
+      "fields": {
+        "order_no": { "name": "订单号", "description": "订单号" }
+      }
+    },
+    "send_sms_code": {
+      "name": "发送短信验证码",
+      "description": "发送短信验证码到指定手机号（用于登录）。",
+      "fields": {
+        "mobile": { "name": "手机号", "description": "接收验证码的手机号" }
+      }
+    },
+    "register_by_sms": {
+      "name": "短信验证码登录",
+      "description": "使用短信验证码登录，返回 token。",
+      "fields": {
+        "mobile": { "name": "手机号", "description": "手机号" },
+        "verify_code": { "name": "验证码", "description": "短信验证码" }
+      }
+    }
+  },
+  "selector": {
+    "login_method": {
+      "name": "登录方式",
+      "options": {
+        "token": "输入 Token",
+        "sms": "手机号短信登录"
       }
     }
   }
