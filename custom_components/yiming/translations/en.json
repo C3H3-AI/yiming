@@ -226,14 +226,5 @@
         "verify_code": { "name": "Verification Code", "description": "SMS verification code" }
       }
     }
-  },
-  "selector": {
-    "login_method": {
-      "name": "Login Method",
-      "options": {
-        "token": "Enter Token",
-        "sms": "SMS Login"
-      }
-    }
   }
 }

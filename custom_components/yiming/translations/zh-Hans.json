@@ -226,14 +226,5 @@
         "verify_code": { "name": "验证码", "description": "短信验证码" }
       }
     }
-  },
-  "selector": {
-    "login_method": {
-      "name": "登录方式",
-      "options": {
-        "token": "输入 Token",
-        "sms": "手机号短信登录"
-      }
-    }
   }
 }
