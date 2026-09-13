@@ -3,6 +3,7 @@
   "name": "一鸣 (Yiming)",
   "codeowners": ["@C3H3-AI"],
   "config_flow": true,
+  "dependencies": [],
   "documentation": "https://github.com/C3H3-AI/yiming",
   "issue_tracker": "https://github.com/C3H3-AI/yiming/issues",
   "iot_class": "cloud_polling",
